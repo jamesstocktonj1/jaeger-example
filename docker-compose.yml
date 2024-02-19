@@ -1,0 +1,73 @@
+version: '3.7'
+
+services:
+  logger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    ports:
+      - "5775:5775/udp"
+      - "6831:6831/udp"
+      - "6832:6832/udp"
+      - "5778:5778"
+      - "16686:16686"
+      - "14268:14268"
+      - "9411:9411"
+
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:3
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: "user"
+      RABBITMQ_DEFAULT_PASS: "password"
+    healthcheck:
+      test: "rabbitmqctl status | grep -q 'running'"
+      interval: 5s
+      timeout: 5s
+      retries: 3
+
+  proxy:
+    container_name: proxy
+    build:
+      context: proxy/.
+      dockerfile: Dockerfile
+    environment:
+      - JAEGER_AGENT_HOST=jaeger
+      - JAEGER_AGENT_PORT=6831
+      - JAEGER_SERVICE_NAME=jaeger-proxy
+    ports:
+      - "8080:8080"
+
+  account:
+    container_name: account
+    build:
+      context: account/.
+      dockerfile: Dockerfile
+    environment:
+      - JAEGER_AGENT_HOST=jaeger
+      - JAEGER_AGENT_PORT=6831
+      - JAEGER_SERVICE_NAME=jaeger-account
+
+  booking:
+    container_name: booking
+    build:
+      context: booking/.
+      dockerfile: Dockerfile
+    environment:
+      - JAEGER_AGENT_HOST=jaeger
+      - JAEGER_AGENT_PORT=6831
+      - JAEGER_SERVICE_NAME=jaeger-booking
+      - AMQP_ADDR=rabbitmq
+
+  batch:
+    container_name: batch
+    build:
+      context: batch/.
+      dockerfile: Dockerfile
+    environment:
+      - JAEGER_AGENT_HOST=jaeger
+      - JAEGER_AGENT_PORT=6831
+      - JAEGER_SERVICE_NAME=jaeger-batch
+      - AMQP_ADDR=rabbitmq
