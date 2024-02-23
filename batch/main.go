@@ -37,6 +37,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer closer.Close()
 
 	msg, err := ch.Consume(
 		chName, // queue
